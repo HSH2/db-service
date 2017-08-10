@@ -1,4 +1,5 @@
 const mysql = require('mysql');
+const constants = require('./constants.js');
 
 const connection = mysql.createConnection({
   host: 'localhost',
@@ -11,6 +12,29 @@ connection.connect(function(err) {
     console.error('error connecting: ' + err.stack);
     return;
   }
-
   console.log('connected as id ' + connection.threadId);
 });
+
+console.log(constants.CHECK_DATABASE_EXIST);
+console.log(constants.CREATE_SOURCE_TABLE);
+console.log(constants.CREATE_LINK_TABLE);
+
+connection.query(constants.CREATE_DATABASE, (error, results, fields) => {
+  if (error) {
+    return;
+  }
+  console.log(results);
+  connection.query(constants.CREATE_SOURCE_TABLE, (error, results, fields) => {
+    if (error) {
+      return;
+    }
+    console.log(results);    
+    connection.query(constants.CREATE_LINK_TABLE, (error, results, fields) => {
+      if (error) {
+        return;
+      }
+      console.log(results);      
+    })
+  });
+})
+

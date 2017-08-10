@@ -1,5 +1,6 @@
 
 - 在数据库语句中什么时候用单引号还是斜分号
+
 https://stackoverflow.com/questions/11321491/when-to-use-single-quotes-double-quotes-and-backticks-in-mysql/11321508#11321508
 
 
