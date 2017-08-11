@@ -10,29 +10,29 @@ function createConnection() {
 }
 
 
-function checkDBExist(connection = createConnection(), callback) {
+function checkDBExist(callback, connection = createConnection()) {
   connection.query(constants.CHECK_DATABASE_EXIST, (error, results, fields) => {
     if (error) {
       connection.end();
-      callback(error, connection);
+      callback(error, undefined, connection);
     }
-    callback(undefined, connection, results);
+    callback(undefined, results, connection);
   });
 }
 
-function createDB(connection = createConnection(), callback) {
+function createDB(callback, connection = createConnection()) {
   connection.query(constants.CREATE_DATABASE, (error, results, fields) => {
     if (error) {
       connection.end();
-      callback(error, connection);
+      callback(error, undefined, connection);      
     }
-    callback(undefined, connection, results);
+    callback(undefined, results, connection);    
   })  
 }
 
-checkDBExist(createConnection(), function(error, connection, results) {
+checkDBExist(function(error, results, connection) {
   if (!results || !results.length) {
-    createDB(connection, function (error, connection, results) {
+    createDB(connection, function (error, results, connection) {
       if (error) {
         connection.end();
         return;
@@ -41,7 +41,8 @@ checkDBExist(createConnection(), function(error, connection, results) {
       return;
     });
   }
-})
+  console.log('Have DB');
+});
 
 
 // connection.connect(function(err) {
