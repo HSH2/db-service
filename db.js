@@ -9,70 +9,54 @@ function createConnection() {
   });
 }
 
+function commonCallback(connection, callback, error, results, fields) {
+  if (error) {
+    connection.end();
+    callback(error, connection, undefined, undefined);
+    return false;
+  }
+  callback(undefined, connection, results, fields);
+}
 
 function checkDBExist(callback, connection = createConnection()) {
-  connection.query(constants.CHECK_DATABASE_EXIST, (error, results, fields) => {
-    if (error) {
-      connection.end();
-      callback(error, undefined, connection);
-    }
-    callback(undefined, results, connection);
-  });
+  connection.query(constants.CHECK_DATABASE_EXIST, commonCallback.bind(this, connection, callback));
 }
 
 function createDB(callback, connection = createConnection()) {
-  connection.query(constants.CREATE_DATABASE, (error, results, fields) => {
-    if (error) {
-      connection.end();
-      callback(error, undefined, connection);      
-    }
-    callback(undefined, results, connection);    
-  })  
+  connection.query(constants.CREATE_DATABASE, commonCallback.bind(this, connection, callback));
 }
 
-checkDBExist(function(error, results, connection) {
-  if (!results || !results.length) {
-    createDB(connection, function (error, results, connection) {
+function dropDB(callback, connection = createConnection()) {
+  connection.query(constants.DROP_DATABASE, commonCallback.bind(this, connection, callback));
+}
+
+checkDBExist(function (error, connection, results, fields) {
+  if (error) {
+    console.log(error);
+    connection.end();
+    return;
+  }
+  console.log('HAVE DB--->', results, connection.id);
+  if (results.length) {
+    dropDB(function (error, connection, results, fields) {
       if (error) {
+        console.log(error);
         connection.end();
         return;
       }
+      console.log('DROP DB--->', results, connection.id);
       connection.end();
-      return;
-    });
+    }, connection);
+  } else {
+    createDB(function (error, connection, results, fields) {
+      if (error) {
+        console.log(error);
+        connection.end();
+        return;
+      }
+      console.log('CREATE DB--->', results, connection.id);
+      connection.end();
+    }, connection);
   }
-  console.log('Have DB');
 });
-
-
-// connection.connect(function(err) {
-//   if (err) {
-//     console.error('error connecting: ' + err.stack);
-//     return;
-//   }
-//   console.log('connected as id ' + connection.threadId);
-// });
-
-// console.log(constants.CHECK_DATABASE_EXIST);
-// console.log(constants.CREATE_SOURCE_TABLE);
-// console.log(constants.CREATE_LINK_TABLE);
-
-// connection.query(constants.CREATE_DATABASE, (error, results, fields) => {
-//   if (error) {
-//     return;
-//   }
-//   console.log(results);
-//   connection.query(constants.CREATE_SOURCE_TABLE, (error, results, fields) => {
-//     if (error) {
-//       return;
-//     }
-//     console.log(results);    
-//     connection.query(constants.CREATE_LINK_TABLE, (error, results, fields) => {
-//       if (error) {
-//         return;
-//       }
-//       console.log(results);      
-//     })
-//   });
-// })
 
