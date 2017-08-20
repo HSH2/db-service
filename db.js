@@ -1,21 +1,12 @@
 const mysql = require('mysql');
 const constants = require('./constants.js');
 
-function createConnection() {
+function createServerConnection() {
   return mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '123456',  
   });
-}
-
-function commonCallback(connection, callback, error, results, fields) {
-  if (error) {
-    connection.end();
-    callback(error, connection, undefined, undefined);
-    return false;
-  }
-  callback(undefined, connection, results, fields);
 }
 
 function createDBConnection() {
@@ -27,30 +18,46 @@ function createDBConnection() {
   });
 }
 
-function checkDBExist(callback, connection = createConnection()) {
-  connection.query(constants.CHECK_DATABASE_EXIST, commonCallback.bind(this, connection, callback));
+function commonCallback(connection, resolve, reject, error, results, fields) {
+  if (error) {
+    connection.end();
+    reject(error, connection);
+    return false;
+  }
+  resolve(results, fields, connection)
 }
 
-function createDB(callback, connection = createConnection()) {
-  connection.query(constants.CREATE_DATABASE, commonCallback.bind(this, connection, callback));
+function promiseWrap(queryStr, connection) {
+  return new Promise(function (resolve, reject) {
+    connection.query(queryStr, commonCallback.bind(this, connection, resolve, reject));
+  });
 }
 
-function dropDB(callback, connection = createConnection()) {
-  connection.query(constants.DROP_DATABASE, commonCallback.bind(this, connection, callback));
+
+function checkDBExist(connection = createServerConnection()) {
+  return promiseWrap(constants.CHECK_DATABASE_EXIST, connection);
 }
 
-function createTable(queryStr, callback, connection = createConnection()) {
-  connection.query(queryStr, commonCallback.bind(this, connection, callback));
+function createDB(connection = createServerConnection()) {
+  return promiseWrap(constants.CREATE_DATABASE, connection);
 }
 
-function createSourceTable(callback, connection = createConnection()) {
+function dropDB(connection = createServerConnection()) {
+  return promiseWrap(constants.DROP_DATABASE, connection);
+}
+
+function createTable(queryStr, connection = createDBConnection()) {
+  return promiseWrap(queryStr, connection);
+}
+
+function createSourceTable(connection = createDBConnection()) {
   const queryStr = constants.CREATE_SOURCE_TABLE;
-  createTable(queryStr, callback, connection);
+  return createTable(queryStr, connection);
 }
 
-function createLinkTable(callback, connection = createConnection()) {
-  const queryStr = constants.CREATE_LINK_TABLE;
-  createTable(queryStr, callback, connection);
+function createLinkTable(connection = createDBConnection()) {
+  const queryStr = constants.CREATE_LINK_TABLE;  
+  return createTable(queryStr, connection);
 }
 
 module.exports = {
