@@ -21,10 +21,10 @@ function createDBConnection() {
 function commonCallback(connection, resolve, reject, error, results, fields) {
   if (error) {
     connection.end();
-    reject(error, connection);
+    reject({ error, connection });
     return false;
   }
-  resolve(results, fields, connection)
+  resolve({ results, fields, connection })
 }
 
 function promiseWrap(queryStr, connection) {
@@ -34,8 +34,18 @@ function promiseWrap(queryStr, connection) {
 }
 
 
-function checkDBExist(connection = createServerConnection()) {
-  return promiseWrap(constants.CHECK_DATABASE_EXIST, connection);
+function hasNoDB(connection = createServerConnection()) {
+  return new Promise(function(resolve, reject) {
+    connection.query(constants.CHECK_DATABASE_EXIST, function(error, results, fileds) {
+      if (error || (results && results.length !== 0)) {
+        reject({ error, connection });
+        return;
+      }
+      if (results && results.length === 0) {
+        resolve(connection);
+      }
+    });
+  })
 }
 
 function createDB(connection = createServerConnection()) {
@@ -61,8 +71,9 @@ function createLinkTable(connection = createDBConnection()) {
 }
 
 module.exports = {
+  createServerConnection,
   createDBConnection,
-  checkDBExist,
+  hasNoDB,
   createDB,
   dropDB,
   createSourceTable,
