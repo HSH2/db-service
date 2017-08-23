@@ -1,7 +1,9 @@
-const db = require('./db.js');
-
-db.dropDB().then(function({ results, fileds, connection }) {
+const mysql = require('mysql');
+const connection = mysql.createConnection({
+  host: 'localhost',
+  user: 'root',
+  password: '123456',  
+});
+connection.query('DROP DATABASE IF EXISTS `home`', function() {
   connection.end();
-}, function({ error, connection }) {
-  connection.end();  
-})
+});
