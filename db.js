@@ -1,34 +1,12 @@
 'use strict'
-const winston = require('winston');
-const logger = new (winston.Logger)({
-  transports: [
-    new (winston.transports.Console)(),
-    new (winston.transports.File)({ filename: 'somefile.log' }),
-  ]
-});
 
-const { NODE_ENV } = process.env;
-const DATABASE = 'home';
-const CONFIG = {
-  production: {
-    host: '127.0.0.1',
-    user: 'root',
-    password: '123456'
-  },
-  development: {
-    host: '127.0.0.1',
-    user: 'root',
-    password: '123456'    
-  }
-}
+const bunyan = require('bunyan');
+const logger = bunyan.createLogger({name: 'db-service'});
+
+const config = require('./config.js');
+const { DATABASE, serverConnection: serverCon } = config;
 
 let initialized = false;
-const commandQueue = [];
-const dispatch = () => {
-
-}
-
-const serverCon = CONFIG[NODE_ENV || 'development'];
 let knex;
 
 function initialize() {
@@ -50,6 +28,7 @@ function initialize() {
     return knex.raw(`create DATABASE IF NOT EXISTS ${DATABASE}`)
     .then(function(rows){
       logger.info('create database success');
+      initialized = true;
       // 数据库创建成功，原链接销毁
       // 重新创建针对数据库的连接
       knex.destroy();  
@@ -62,7 +41,7 @@ function initialize() {
         table.increments('id').primary();
         table.string('name');
         table.string('remark');
-        table.timestamps();
+        table.timestamps(true, true);
       }).then(function() {
         logger.info('create source table success');      
         return knex.schema.createTable('Link', function(table) {
@@ -70,7 +49,7 @@ function initialize() {
           table.string('title');
           table.text('link');
           table.integer('source_id').unsigned().notNullable().references('id').inTable('Source');
-          table.timestamps();
+          table.timestamps(true, true);
         }).then(function() {
           logger.info('create link table success');
           logger.info('create all table success');
@@ -80,18 +59,67 @@ function initialize() {
   });
 }
 
-function batchInserts() {
-  if (!initialized) {
-    const initializePromise = initialize();
-    initializePromise.then(function(has) {
-      logger.info('initialize complete');
-    }).catch(function(error) {
-      logger.error(error);
+function check() {
+  if (initialized) {
+    return Promise.resolve();
+  } else {
+    return new Promise(function(resolve, reject) {
+      if (!initialized) {
+        const initializePromise = initialize();
+        initializePromise.then(function(dbExists) {
+          if (!dbExists) {
+            logger.info('initialize complete');
+          }
+          resolve();
+        }).catch(function(error) {
+          logger.error(error);
+          reject(error);
+        });
+      }
     });
   }
 }
 
+function drop() {
+  knex = require('knex')({
+    client: 'mysql',
+    connection: serverCon,
+  });
+  return knex.raw(`DROP DATABASE IF EXISTS ${DATABASE}`)
+  .then(function() {
+    initialized = false;
+    logger.info('drop database success');    
+    knex.destroy();
+  }, function() {
+    logger.info('drop database failed');    
+    knex.destroy();
+  });
+}
+
+function batchInsertSources(sources) {
+  return check().then(function() {
+    return knex('Source')
+      .insert(sources)
+      .then(function() {
+        logger.info(`insert sources success, data length ${sources.length}`);
+      });
+  })
+}
+
+function batchInsertLinks(links) {
+  return check().then(function() {
+    return knex('Link')
+      .insert(links)
+      .then(function() {
+        logger.info(`insert links success, data length ${links.length}`);        
+      });
+  })
+}
+
 
 module.exports = {
-
+  initialize,
+  drop,
+  batchInsertLinks,
+  batchInsertSources,
 }

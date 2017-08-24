@@ -2,6 +2,7 @@
     "name": "d-service",
     "version": "0.0.1",
     "dependencies": {
+        "bunyan": "^1.8.12",
         "knex": "^0.13.0",
         "mysql": "^2.14.1",
         "winston": "^2.3.1"
