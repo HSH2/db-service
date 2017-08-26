@@ -6,5 +6,8 @@
         "knex": "^0.13.0",
         "mysql": "^2.14.1",
         "winston": "^2.3.1"
+    },
+    "scripts": {
+        "test": "set NODE_ENV=test&& node test"
     }
 }

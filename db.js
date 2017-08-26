@@ -3,8 +3,7 @@
 const bunyan = require('bunyan');
 const logger = bunyan.createLogger({name: 'db-service'});
 
-const config = require('./config.js');
-const { DATABASE, serverConnection: serverCon } = config;
+const { connection, database } = require('./config.js');
 
 let initialized = false;
 let knex;
@@ -12,11 +11,11 @@ let knex;
 function initialize() {
   knex = require('knex')({
     client: 'mysql',
-    connection: serverCon,
+    connection: connection,
   });
   // 首先判断服务器中是否有数据库
   // 为什么不直接使用 create database if not exists ? 因为不够准确
-  return knex.raw(`SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '${DATABASE}';`)
+  return knex.raw(`SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '${database}';`)
   .then(function([resultRow]) {
     // 如果数据库已经存在
     if (resultRow.length) {
@@ -25,7 +24,7 @@ function initialize() {
     }
     logger.info('database do not exist');    
     // 数据库不存在，则新建数据库
-    return knex.raw(`create DATABASE IF NOT EXISTS ${DATABASE}`)
+    return knex.raw(`create DATABASE IF NOT EXISTS ${database}`)
     .then(function(rows){
       logger.info('create database success');
       initialized = true;
@@ -35,7 +34,7 @@ function initialize() {
       knex = require('knex')({ 
         client: 'mysql', 
         //  Node.js 不支持 spread operator，本来可以写成 { ...con, database: database }
-        connection: Object.assign({}, serverCon, { database: DATABASE }),
+        connection: Object.assign({}, connection, { database: database }),
       });
       return knex.schema.createTable('Source', function(table) {
         table.increments('id').primary();
@@ -83,9 +82,9 @@ function check() {
 function drop() {
   knex = require('knex')({
     client: 'mysql',
-    connection: serverCon,
+    connection: connection,
   });
-  return knex.raw(`DROP DATABASE IF EXISTS ${DATABASE}`)
+  return knex.raw(`DROP DATABASE IF EXISTS ${database}`)
   .then(function() {
     initialized = false;
     logger.info('drop database success');    
